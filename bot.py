@@ -1,41 +1,36 @@
 from telegram.ext import ApplicationBuilder, CommandHandler
+from fastapi import FastAPI
+import uvicorn
 import os
-import logging
+from threading import Thread
 
-# Set up logging
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Create FastAPI app for health checks
+app = FastAPI()
 
-# Get token from environment variables
-TOKEN = os.environ.get('BOT_TOKEN')
+@app.get("/")
+def health_check():
+    """Endpoint for health checks"""
+    return {"status": "VegaMoviesBot is running"}
 
 async def start(update, context):
-    """Handler for the /start command"""
-    await update.message.reply_text(
-        "🎬 **VegaMoviesBot is running!**\n\n"
-        "Available commands:\n"
-        "/start - Start the bot\n"
-        "/movies - Browse all movies"
-    )
+    """Handler for /start command"""
+    await update.message.reply_text("🎬 VegaMoviesBot is running!")
 
-async def movies(update, context):
-    """Handler for the /movies command"""
-    await update.message.reply_text("🍿 All movies: https://vegamoviess.fun")
-
-def main():
-    """Start the bot"""
-    # Create the Application
-    app = ApplicationBuilder().token(TOKEN).build()
+def run_bot():
+    """Function to run the Telegram bot"""
+    TOKEN = os.environ['BOT_TOKEN']
     
-    # Add command handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("movies", movies))
+    # Initialize and configure bot
+    bot = ApplicationBuilder().token(TOKEN).build()
+    bot.add_handler(CommandHandler("start", start))
     
-    # Start the bot
-    print("Bot is starting...")
-    app.run_polling()
+    # Start polling for updates
+    bot.run_polling()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    # Start bot in a separate daemon thread
+    bot_thread = Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Run FastAPI server on main thread for health checks
+    uvicorn.run(app, host="0.0.0.0", port=8000)
