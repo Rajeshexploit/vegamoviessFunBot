@@ -2,35 +2,35 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 from fastapi import FastAPI
 import uvicorn
 import os
-from threading import Thread
+import asyncio
+import threading
 
-# Create FastAPI app for health checks
 app = FastAPI()
 
 @app.get("/")
 def health_check():
-    """Endpoint for health checks"""
-    return {"status": "VegaMoviesBot is running"}
+    return {"status": "VegaMoviesBot चालू है"}
 
 async def start(update, context):
-    """Handler for /start command"""
-    await update.message.reply_text("🎬 VegaMoviesBot is running!")
+    await update.message.reply_text("🎬 VegaMoviesBot चालू है!")
 
-def run_bot():
-    """Function to run the Telegram bot"""
+async def run_bot():
+    """बॉट को async तरीके से चलाता है"""
     TOKEN = os.environ['BOT_TOKEN']
-    
-    # Initialize and configure bot
     bot = ApplicationBuilder().token(TOKEN).build()
     bot.add_handler(CommandHandler("start", start))
-    
-    # Start polling for updates
-    bot.run_polling()
+    await bot.run_polling()
+
+def start_bot():
+    """थ्रेड के अंदर नया इवेंट लूप बनाता है"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_bot())
 
 if __name__ == "__main__":
-    # Start bot in a separate daemon thread
-    bot_thread = Thread(target=run_bot, daemon=True)
+    # बॉट को अलग थ्रेड में चलाएं
+    bot_thread = threading.Thread(target=start_bot, daemon=True)
     bot_thread.start()
     
-    # Run FastAPI server on main thread for health checks
+    # मुख्य थ्रेड में FastAPI सर्वर चलाएं
     uvicorn.run(app, host="0.0.0.0", port=8000)
